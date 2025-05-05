@@ -5,6 +5,7 @@ import { generateLoaderAbsoluteTemplate } from '../../templates';
 import Camera from '../../utils/camera';
 import Map from '../../utils/map';
 import Swal from 'sweetalert2';
+import { addStory, getAllStories, deleteStory } from '../../utils/indexeddb';
 
 const VAPID_PUBLIC_KEY =
   'BCCs2eonMI-6H2ctvFaWg-UYdDv387Vno_bzUzALpB442r2lCnsHmtrx8biyPi_E-1fSGABK_Qs_GlvPoJJqxbk';
@@ -16,6 +17,7 @@ export default class NewStoryPage {
   #isCameraOpen = false;
   #takenDocumentations = [];
   #map;
+  #storedStories = [];
 
   async render() {
     return `
@@ -124,7 +126,78 @@ export default class NewStoryPage {
 
     this.#presenter.showNewFormMap();
     this.#setupForm();
+
+    // Removed stored stories loading and rendering to prevent showing stored stories on new story page
+    // await this.#loadStoredStories();
+
+    // Removed event listener for sync button related to stored stories
+    // document.getElementById('sync-offline-stories-btn').addEventListener('click', async () => {
+    //   await this.#syncOfflineStories();
+    // });
   }
+
+  // Removed stored stories sync method
+  // async #syncOfflineStories() {
+  //   if (!navigator.onLine) {
+  //     Swal.fire({
+  //       icon: 'warning',
+  //       title: 'Tidak ada koneksi internet',
+  //       text: 'Silakan sambungkan ke internet untuk melakukan sinkronisasi.',
+  //     });
+  //     return;
+  //   }
+
+  //   this.showSubmitLoadingButton();
+
+  //   for (const story of this.#storedStories) {
+  //     try {
+  //       await this.#presenter.postNewReport(story);
+  //       await deleteStory(story.id);
+  //     } catch (error) {
+  //       console.error('Gagal sinkronisasi story:', story, error);
+  //     }
+  //   }
+
+  //   await this.#loadStoredStories();
+  //   this.hideSubmitLoadingButton();
+
+  //   Swal.fire({
+  //     icon: 'success',
+  //     title: 'Sinkronisasi selesai',
+  //     text: 'Semua story offline berhasil disinkronisasi.',
+  //   });
+  // }
+
+  // Removed stored stories loading method
+  // async #loadStoredStories() {
+  //   this.#storedStories = await getAllStories();
+  //   this.#renderStoredStories();
+  // }
+
+  // Removed stored stories rendering method
+  // #renderStoredStories() {
+  //   const listElement = document.getElementById('stored-stories-list');
+  //   if (!listElement) return;
+
+  //   listElement.innerHTML = this.#storedStories
+  //     .map(
+  //       (story) => `
+  //     <li>
+  //       <p>${story.description}</p>
+  //       <button data-id="${story.id}" class="delete-story-btn">Hapus</button>
+  //     </li>
+  //   `,
+  //     )
+  //     .join('');
+
+  //   listElement.querySelectorAll('.delete-story-btn').forEach((button) => {
+  //     button.addEventListener('click', async (event) => {
+  //       const id = event.target.getAttribute('data-id');
+  //       await deleteStory(id);
+  //       await this.#loadStoredStories();
+  //     });
+  //   });
+  // }
 
   #setupForm() {
     this.#form = document.getElementById('new-form');
@@ -137,12 +210,25 @@ export default class NewStoryPage {
       }
 
       const data = {
+        id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         description: this.#form.elements.namedItem('description').value,
         photo: photoToSend,
         lat: this.#form.elements.namedItem('latitude').value,
         lon: this.#form.elements.namedItem('longitude').value,
       };
-      await this.#presenter.postNewReport(data);
+
+      // Save to IndexedDB
+      await addStory(data);
+
+      // Optionally, try to send to server if online
+      if (navigator.onLine) {
+        await this.#presenter.postNewReport(data);
+        this.storeSuccessfully('Story berhasil disimpan dan dikirim.');
+      } else {
+        this.storeSuccessfully('Story berhasil disimpan secara offline.');
+      }
+
+      // await this.#loadStoredStories();
     });
 
     document.getElementById('documentations-input').addEventListener('change', async (event) => {

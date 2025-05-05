@@ -106,6 +106,52 @@ export function generateReportItemTemplate({
   `;
 }
 
+export function generateReportItemOfflineTemplate({
+  id,
+  description,
+  photoUrl,
+  name,
+  createdAt,
+  lat,
+  lon,
+}) {
+  // Limit description length to 100 characters
+  const maxLength = 100;
+  let shortDescription = description;
+  if (description && description.length > maxLength) {
+    shortDescription = description.substring(0, maxLength) + '...';
+  }
+
+  return `
+    <div tabindex="0" class="report-item" data-reportid="${id}">
+      <img class="report-item__image" src="${photoUrl}" alt="photo by ${name}">
+      <div class="report-item__body">
+        <div class="report-item__main">
+          <div class="report-item__more-info">
+            <div class="report-item__createdat">
+              <i class="fas fa-calendar-alt"></i> ${showFormattedDate(createdAt, 'id-ID')}
+            </div>
+            <div class="report-item__location">
+              <i class="fas fa-map"></i> Lat: ${lat} <br> Lon: ${lon}
+            </div>
+          </div>
+        </div>
+        <div id="report-description" class="report-item__description">
+          ${shortDescription}
+        </div>
+        <div class="report-item__more-info">
+          <div class="report-item__author">
+            Dibuat oleh: ${name}
+          </div>
+        </div>
+        <button class="btn delete-story-btn" data-id="${id}">
+          Hapus <i class="fa-solid fa-trash-can"></i>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
 export function generateReportDetailTemplate({ description, photoUrl, lat, lon, name, createdAt }) {
   const createdAtFormatted = showFormattedDate(createdAt, 'id-ID');
 

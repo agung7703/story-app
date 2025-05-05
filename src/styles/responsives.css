@@ -80,6 +80,10 @@
     grid-template-columns: repeat(2, minmax(300px, 1fr));
   }
 
+  .stored-stories-list {
+    grid-template-columns: repeat(2, minmax(300px, 1fr));
+  }
+
   /* Report detail */
   .report-detail__body-container {
     inset-block-start: -200px;
@@ -139,6 +143,10 @@
   }
 
   .reports-list {
+    grid-template-columns: repeat(3, minmax(300px, 1fr));
+  }
+
+  .stored-stories-list {
     grid-template-columns: repeat(3, minmax(300px, 1fr));
   }
 

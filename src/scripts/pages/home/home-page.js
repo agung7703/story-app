@@ -1,5 +1,6 @@
 import {
   generateLoaderAbsoluteTemplate,
+  generateReportItemOfflineTemplate,
   generateReportItemTemplate,
   generateReportsListEmptyTemplate,
   generateReportsListErrorTemplate,
@@ -7,10 +8,13 @@ import {
 import HomePresenter from './home-presenter';
 import Map from '../../utils/map';
 import * as LaporAPI from '../../data/api';
+import { getAllStories, deleteStory } from '../../utils/indexeddb';
+import Swal from 'sweetalert2';
 
 export default class HomePage {
   #presenter = null;
   #map;
+  #storedStories = [];
 
   async render() {
     return `
@@ -28,7 +32,17 @@ export default class HomePage {
           <div id="reports-list"></div>
           <div id="reports-list-loading-container"></div>
         </div>
-      </section>
+        </section>
+
+        <section class="container">
+          <h1 class="section-title">Stored Stories (Offline)</h1>
+          <button id="sync-offline-stories-btn" class="btn offline-btn btn-primary">Sync Offline Stories</button>
+          <div class="report-list__container">
+          
+            <div id="stored-stories-list" class="stored-stories-list"></div>
+            <div id="reports-list-loading-container"></div>
+          </div>
+        </section>
     `;
   }
 
@@ -46,6 +60,82 @@ export default class HomePage {
     }
 
     await this.#presenter.initialGalleryAndMap();
+    await this.#loadStoredStories();
+
+    document.getElementById('sync-offline-stories-btn').addEventListener('click', async () => {
+      await this.#syncOfflineStories();
+    });
+  }
+
+  async #syncOfflineStories() {
+    if (!navigator.onLine) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Tidak ada koneksi internet',
+        text: 'Silakan sambungkan ke internet untuk melakukan sinkronisasi.',
+      });
+      return;
+    }
+
+    this.showLoading();
+
+    for (const story of this.#storedStories) {
+      try {
+        await this.#presenter.model.postNewReport(story);
+        await deleteStory(story.id);
+      } catch (error) {
+        console.error('Gagal sinkronisasi story:', story, error);
+      }
+    }
+
+    await this.#loadStoredStories();
+    this.hideLoading();
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Sinkronisasi selesai',
+      text: 'Semua story offline berhasil disinkronisasi.',
+    });
+  }
+
+  async #loadStoredStories() {
+    this.#storedStories = await getAllStories();
+    this.#renderStoredStories();
+  }
+
+  #renderStoredStories() {
+    const listElement = document.getElementById('stored-stories-list');
+    if (!listElement) return;
+
+    listElement.innerHTML = this.#storedStories
+      .map((story) =>
+        generateReportItemOfflineTemplate({
+          id: story.id,
+          description: story.description,
+          photoUrl: story.photo ? URL.createObjectURL(story.photo) : '',
+          name: story.name || 'Unknown',
+          createdAt: story.createdAt || new Date().toISOString(),
+          lat: story.lat || 0,
+          lon: story.lon || 0,
+        }),
+      )
+      .join('');
+
+    listElement.querySelectorAll('.report-item').forEach((item) => {
+      item.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          item.querySelector('.report-item__read-more').click();
+        }
+      });
+    });
+
+    listElement.querySelectorAll('.delete-story-btn').forEach((button) => {
+      button.addEventListener('click', async (event) => {
+        const id = event.target.getAttribute('data-id');
+        await deleteStory(id);
+        await this.#loadStoredStories();
+      });
+    });
   }
 
   populateReportsList(message, listStory) {
@@ -100,9 +190,27 @@ export default class HomePage {
       return; // Keluar jika peta sudah ada
     }
 
-    // Mendapatkan posisi pengguna
+    // Mendapatkan posisi pengguna dengan timeout
+    const getPositionWithTimeout = (timeout = 5000) => {
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          reject(new Error('Geolocation timeout'));
+        }, timeout);
+
+        Map.getCurrentPosition()
+          .then((position) => {
+            clearTimeout(timer);
+            resolve(position);
+          })
+          .catch((error) => {
+            clearTimeout(timer);
+            reject(error);
+          });
+      });
+    };
+
     try {
-      const position = await Map.getCurrentPosition();
+      const position = await getPositionWithTimeout(5000);
       const coordinate = [position.coords.latitude, position.coords.longitude];
 
       // Pastikan koordinat valid

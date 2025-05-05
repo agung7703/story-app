@@ -22,11 +22,46 @@ export default class App {
     this.#skipLinkButton = skipLinkButton;
 
     this.#init();
+    this.#registerServiceWorker();
+    this.#setupNetworkListeners();
   }
 
   #init() {
     setupSkipToContent(this.#skipLinkButton, this.#content);
     this.#setupDrawer();
+  }
+
+  #registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker
+          .register('/sw.js')
+          .then((registration) => {
+            console.log('Service Worker registered with scope:', registration.scope);
+          })
+          .catch((error) => {
+            console.error('Service Worker registration failed:', error);
+          });
+      });
+    }
+  }
+
+  #setupNetworkListeners() {
+    window.addEventListener('offline', () => {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Anda sedang offline',
+        text: 'Mohon periksa jaringan anda',
+        toast: true,
+        position: 'top-end',
+        timer: 3000,
+        showConfirmButton: false,
+      });
+    });
+
+    window.addEventListener('online', () => {
+      location.reload();
+    });
   }
 
   #setupDrawer() {
@@ -95,13 +130,39 @@ export default class App {
     // Get page instance
     const page = route();
 
-    const transition = transitionHelper({
-      updateDOM: async () => {
-        this.#content.innerHTML = await page.render();
-        await page.afterRender();
-      },
+    // Timeout wrapper for updateDOM to avoid transition timeout
+    const updateDOMWithTimeout = async () => {
+      const timeout = 10000; // 10 seconds timeout
+      return Promise.race([
+        (async () => {
+          this.#content.innerHTML = await page.render();
+          await page.afterRender();
+        })(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('updateDOM timeout')), timeout),
+        ),
+      ]);
+    };
+
+    let transition;
+    try {
+      transition = transitionHelper({
+        updateDOM: updateDOMWithTimeout,
+      });
+    } catch (error) {
+      console.error('Transition helper error:', error);
+      // Fallback to direct update without transition
+      await updateDOMWithTimeout();
+      transition = {
+        ready: Promise.resolve(),
+        updateCallbackDone: Promise.resolve(),
+      };
+    }
+
+    transition.ready.catch((error) => {
+      console.error('Transition ready error:', error);
     });
-    transition.ready.catch(console.error);
+
     transition.updateCallbackDone.then(() => {
       scrollTo({ top: 0, behavior: 'instant' });
       this.#setupNavigationList();
