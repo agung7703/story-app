@@ -126,78 +126,7 @@ export default class NewStoryPage {
 
     this.#presenter.showNewFormMap();
     this.#setupForm();
-
-    // Removed stored stories loading and rendering to prevent showing stored stories on new story page
-    // await this.#loadStoredStories();
-
-    // Removed event listener for sync button related to stored stories
-    // document.getElementById('sync-offline-stories-btn').addEventListener('click', async () => {
-    //   await this.#syncOfflineStories();
-    // });
   }
-
-  // Removed stored stories sync method
-  // async #syncOfflineStories() {
-  //   if (!navigator.onLine) {
-  //     Swal.fire({
-  //       icon: 'warning',
-  //       title: 'Tidak ada koneksi internet',
-  //       text: 'Silakan sambungkan ke internet untuk melakukan sinkronisasi.',
-  //     });
-  //     return;
-  //   }
-
-  //   this.showSubmitLoadingButton();
-
-  //   for (const story of this.#storedStories) {
-  //     try {
-  //       await this.#presenter.postNewReport(story);
-  //       await deleteStory(story.id);
-  //     } catch (error) {
-  //       console.error('Gagal sinkronisasi story:', story, error);
-  //     }
-  //   }
-
-  //   await this.#loadStoredStories();
-  //   this.hideSubmitLoadingButton();
-
-  //   Swal.fire({
-  //     icon: 'success',
-  //     title: 'Sinkronisasi selesai',
-  //     text: 'Semua story offline berhasil disinkronisasi.',
-  //   });
-  // }
-
-  // Removed stored stories loading method
-  // async #loadStoredStories() {
-  //   this.#storedStories = await getAllStories();
-  //   this.#renderStoredStories();
-  // }
-
-  // Removed stored stories rendering method
-  // #renderStoredStories() {
-  //   const listElement = document.getElementById('stored-stories-list');
-  //   if (!listElement) return;
-
-  //   listElement.innerHTML = this.#storedStories
-  //     .map(
-  //       (story) => `
-  //     <li>
-  //       <p>${story.description}</p>
-  //       <button data-id="${story.id}" class="delete-story-btn">Hapus</button>
-  //     </li>
-  //   `,
-  //     )
-  //     .join('');
-
-  //   listElement.querySelectorAll('.delete-story-btn').forEach((button) => {
-  //     button.addEventListener('click', async (event) => {
-  //       const id = event.target.getAttribute('data-id');
-  //       await deleteStory(id);
-  //       await this.#loadStoredStories();
-  //     });
-  //   });
-  // }
 
   #setupForm() {
     this.#form = document.getElementById('new-form');

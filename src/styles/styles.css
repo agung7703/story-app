@@ -483,7 +483,7 @@ header {
   gap: 20px 15px;
 }
 
-.stored-stories-list {
+.bookmark-list {
   display: grid;
   grid-template-columns: repeat(1, minmax(300px, 1fr));
   gap: 20px 15px;

@@ -22,28 +22,12 @@ export default class App {
     this.#skipLinkButton = skipLinkButton;
 
     this.#init();
-    this.#registerServiceWorker();
     this.#setupNetworkListeners();
   }
 
   #init() {
     setupSkipToContent(this.#skipLinkButton, this.#content);
     this.#setupDrawer();
-  }
-
-  #registerServiceWorker() {
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker
-          .register('/sw.js')
-          .then((registration) => {
-            console.log('Service Worker registered with scope:', registration.scope);
-          })
-          .catch((error) => {
-            console.error('Service Worker registration failed:', error);
-          });
-      });
-    }
   }
 
   #setupNetworkListeners() {
@@ -132,16 +116,21 @@ export default class App {
 
     // Timeout wrapper for updateDOM to avoid transition timeout
     const updateDOMWithTimeout = async () => {
-      const timeout = 10000; // 10 seconds timeout
-      return Promise.race([
-        (async () => {
-          this.#content.innerHTML = await page.render();
-          await page.afterRender();
-        })(),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('updateDOM timeout')), timeout),
-        ),
-      ]);
+      const timeout = 10000;
+      console.time('updateDOMWithTimeout');
+      try {
+        await Promise.race([
+          (async () => {
+            this.#content.innerHTML = await page.render();
+            await page.afterRender();
+          })(),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('updateDOM timeout')), timeout),
+          ),
+        ]);
+      } finally {
+        console.timeEnd('updateDOMWithTimeout');
+      }
     };
 
     let transition;

@@ -1,5 +1,4 @@
 import { getAccessToken } from '../../utils/auth';
-
 import {
   generateLoaderAbsoluteTemplate,
   generateReportDetailErrorTemplate,
@@ -30,13 +29,18 @@ export default class StorieDetailPage {
       `;
   }
 
+  getContainerElement() {
+    return document.getElementById('report-detail');
+  }
+
   async afterRender() {
     this.#presenter = new StorieDetailPresenter(parseActivePathname().id, {
       view: this,
       apiModel: LaporAPI,
     });
 
-    this.#presenter.showReportDetail();
+    await this.#presenter.initBookmarkPresenter(); // Initialize bookmark presenter first
+    await this.#presenter.showReportDetail(); // Then render container and show save button
   }
 
   async populateReportDetailAndInitialMap(message, story) {

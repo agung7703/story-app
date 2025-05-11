@@ -14,6 +14,7 @@ export function generateLoaderAbsoluteTemplate() {
 
 export function generateMainNavigationListTemplate() {
   return `
+  <li><a id="bookmark-button" class="bookmark-button" href="#/bookmark">Story Tersimpan</a></li>
   `;
 }
 
@@ -106,7 +107,7 @@ export function generateReportItemTemplate({
   `;
 }
 
-export function generateReportItemOfflineTemplate({
+export function generateReportItemBookmarkTemplate({
   id,
   description,
   photoUrl,
@@ -144,9 +145,9 @@ export function generateReportItemOfflineTemplate({
             Dibuat oleh: ${name}
           </div>
         </div>
-        <button class="btn delete-story-btn" data-id="${id}">
-          Hapus <i class="fa-solid fa-trash-can"></i>
-        </button>
+        <a class="btn report-item__read-more" href="#/storie/${id}">
+          Selengkapnya <i class="fas fa-arrow-right"></i>
+        </a>
       </div>
     </div>
   `;

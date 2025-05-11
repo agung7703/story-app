@@ -1,66 +1,26 @@
 import { reportMapper } from '../../data/api-mapper';
-
-const LOCAL_STORAGE_KEY = 'subscribedStories';
+import BookmarkPage from '../bookmark/bookmark-page.js';
+import BookmarkPresenter from '../bookmark/bookmark-presenter.js';
 
 export default class StorieDetailPresenter {
   #reportId;
   #view;
   #apiModel;
-  #subscribedStories = new Set();
+  #bookmarkPresenter;
+  #currentStory;
 
   constructor(reportId, { view, apiModel }) {
     this.#reportId = reportId;
     this.#view = view;
     this.#apiModel = apiModel;
-    this.#initializeSubscribedStories();
+    // Initialize bookmark presenter without view to separate data logic from DOM rendering
+    this.#bookmarkPresenter = new BookmarkPresenter(null);
   }
 
-  #getSubscribedStoriesFromStorage() {
-    const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          return new Set(parsed);
-        }
-      } catch {
-        // ignore parse errors
-      }
-    }
-    return new Set();
-  }
-
-  #saveSubscribedStoriesToStorage() {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(Array.from(this.#subscribedStories)));
-  }
-
-  async #initializeSubscribedStories() {
-    try {
-      // Restore from localStorage
-      this.#subscribedStories = this.#getSubscribedStoriesFromStorage();
-
-      // Also check push subscription existence
-      const subscription = await this.#getPushSubscription();
-      if (subscription) {
-        // For simplicity, add current reportId if subscription exists
-        this.#subscribedStories.add(this.#reportId);
-      }
-
-      // Save updated subscribed stories to storage
-      this.#saveSubscribedStoriesToStorage();
-    } catch (error) {
-      console.error('initializeSubscribedStories: error:', error);
-    }
-  }
-
-  addSubscribedStoryToList() {
-    this.#subscribedStories.add(this.#reportId);
-    this.#saveSubscribedStoriesToStorage();
-  }
-
-  removeSubscribedStoryFromList() {
-    this.#subscribedStories.delete(this.#reportId);
-    this.#saveSubscribedStoriesToStorage();
+  async initBookmarkPresenter() {
+    // No DOM container initialization needed here
+    // Just load bookmarks data if needed
+    await this.#bookmarkPresenter.loadBookmarks();
   }
 
   async showReportDetailMap() {
@@ -77,32 +37,31 @@ export default class StorieDetailPresenter {
   async showReportDetail() {
     this.#view.showReportDetailLoading();
     try {
-      const response = await this.#apiModel.getStorieById(this.#reportId); // Gunakan #reportId
+      const response = await this.#apiModel.getStorieById(this.#reportId);
 
-      // Cek apakah permintaan berhasil
       if (!response.ok) {
         console.error('showReportDetail: response:', response);
         this.#view.populateReportDetailError(response.message);
         return;
       }
 
-      // Cek apakah listStory ada dan tidak kosong
       if (!response.story || response.story.length === 0) {
         this.#view.populateReportDetailError('Tidak ada cerita ditemukan.');
         return;
       }
 
-      const story = response.story; // Ambil cerita pertama
-      // Cek apakah lat tidak undefined
+      const story = response.story;
+
       if (typeof story.lat === 'undefined') {
         this.#view.populateReportDetailError('Data story tidak valid.');
         return;
       }
 
-      // Panggil reportMapper dengan objek story yang valid
       const mappedStory = await reportMapper(story);
 
       this.#view.populateReportDetailAndInitialMap(response.message, mappedStory);
+      this.#currentStory = mappedStory; // Save the full story for bookmarking
+      await this.showSaveButton();
     } catch (error) {
       console.error('showReportDetailAndMap: error:', error);
       this.#view.populateReportDetailError(error.message);
@@ -113,7 +72,9 @@ export default class StorieDetailPresenter {
 
   async showSaveButton() {
     try {
-      if (this.#subscribedStories.has(this.#reportId)) {
+      const bookmarks = this.#bookmarkPresenter.getBookmarks();
+      const isBookmarked = bookmarks.some((b) => b.id === this.#reportId);
+      if (isBookmarked) {
         this.#view.renderRemoveButton();
       } else {
         this.#view.renderSaveButton();
@@ -126,68 +87,27 @@ export default class StorieDetailPresenter {
 
   async subscribeToStory(subscriptionData) {
     try {
-      console.log('subscribeToStory: using provided subscription data:', subscriptionData);
-      if (!subscriptionData || !subscriptionData.endpoint || !subscriptionData.keys) {
-        throw new Error('Invalid subscription data');
+      // Use the full story saved in this.#currentStory for bookmarking
+      if (!this.#currentStory) {
+        throw new Error('No story loaded to bookmark');
       }
-      const response = await this.#apiModel.subscribePushNotification({
-        endpoint: subscriptionData.endpoint,
-        keys: {
-          p256dh: subscriptionData.keys.p256dh || '',
-          auth: subscriptionData.keys.auth || '',
-        },
-      });
-      if (!response.ok) {
-        throw new Error(response.message || 'Failed to subscribe');
-      }
-      this.#subscribedStories.add(this.#reportId);
-      this.#saveSubscribedStoriesToStorage();
+      console.log('Adding story to bookmarks:', this.#currentStory);
+      await this.#bookmarkPresenter.addBookmark(this.#currentStory);
       return subscriptionData;
     } catch (error) {
-      console.error('subscribeToStory: error:', error);
+      console.error('subscribeToStory: error:', error, error.stack);
       throw error;
     }
   }
 
   async unsubscribeFromStory(subscriptionData) {
     try {
-      if (!subscriptionData || !subscriptionData.endpoint) {
-        throw new Error('Invalid subscription data');
-      }
-      const response = await this.#apiModel.unsubscribePushNotification({
-        endpoint: subscriptionData.endpoint,
-      });
-      if (!response.ok) {
-        throw new Error(response.message || 'Failed to unsubscribe');
-      }
-      this.#subscribedStories.delete(this.#reportId);
-      this.#saveSubscribedStoriesToStorage();
+      // Directly remove story from IndexedDB without DOM-dependent calls
+      await this.#bookmarkPresenter.removeBookmark(this.#reportId);
       return true;
     } catch (error) {
       console.error('unsubscribeFromStory: error:', error);
       throw error;
     }
-  }
-
-  async #getPushSubscription() {
-    try {
-      console.log('#getPushSubscription: checking service worker support');
-      if (!('serviceWorker' in navigator)) {
-        throw new Error('Service workers are not supported in this browser.');
-      }
-      console.log('#getPushSubscription: waiting for service worker ready');
-      const registration = await navigator.serviceWorker.ready;
-      console.log('#getPushSubscription: service worker ready', registration);
-      const subscription = await registration.pushManager.getSubscription();
-      console.log('#getPushSubscription: push subscription', subscription);
-      return subscription;
-    } catch (error) {
-      console.error('#getPushSubscription: error:', error);
-      throw error;
-    }
-  }
-
-  #isReportSaved() {
-    return false;
   }
 }

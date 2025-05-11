@@ -10,6 +10,28 @@ export default class Camera {
 
   #takePictureButton;
 
+  static addNewStream(stream) {
+    if (!Array.isArray(window.currentStreams)) {
+      window.currentStreams = [stream];
+      return;
+    }
+
+    window.currentStreams = [...window.currentStreams, stream];
+  }
+
+  static stopAllStreams() {
+    if (!Array.isArray(window.currentStreams)) {
+      window.currentStreams = [];
+      return;
+    }
+
+    window.currentStreams.forEach((stream) => {
+      if (stream.active) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    });
+  }
+
   constructor({ video, cameraSelect, canvas, options = {} }) {
     this.#videoElement = video;
     this.#selectCameraElement = cameraSelect;

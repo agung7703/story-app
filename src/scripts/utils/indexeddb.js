@@ -1,5 +1,5 @@
 const DB_NAME = 'story-app-db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = 'stories';
 
 function openDB() {
@@ -28,7 +28,8 @@ export async function addStory(story) {
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORE_NAME, 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
-    const request = store.add(story);
+    // Use put instead of add to allow updating existing keys
+    const request = store.put(story);
 
     request.onsuccess = () => resolve(true);
     request.onerror = (event) => reject(event.target.error);
