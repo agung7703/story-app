@@ -28,6 +28,7 @@ registerRoute(
     cacheName: 'fontawesome',
   }),
 );
+
 registerRoute(
   ({ url }) => {
     return url.origin === 'https://ui-avatars.com';
@@ -41,24 +42,27 @@ registerRoute(
     ],
   }),
 );
+
 registerRoute(
   ({ request, url }) => {
     const baseUrl = new URL(BASE_URL);
     return baseUrl.origin === url.origin && request.destination !== 'image';
   },
   new NetworkFirst({
-    cacheName: 'citycare-api',
+    cacheName: 'story-api',
   }),
 );
+
 registerRoute(
   ({ request, url }) => {
     const baseUrl = new URL(BASE_URL);
     return baseUrl.origin === url.origin && request.destination === 'image';
   },
   new StaleWhileRevalidate({
-    cacheName: 'citycare-api-images',
+    cacheName: 'story-api-images',
   }),
 );
+
 registerRoute(
   ({ url }) => {
     return url.origin.includes('maptiler');

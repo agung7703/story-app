@@ -113,6 +113,9 @@ export default class Camera {
   async launch() {
     this.#currentStream = await this.#getStream();
 
+    // Record all MediaStream in global context
+    Camera.addNewStream(this.#currentStream);
+
     this.#videoElement.srcObject = this.#currentStream;
     this.#videoElement.play();
 
