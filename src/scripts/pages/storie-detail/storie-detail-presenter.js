@@ -1,5 +1,4 @@
 import { reportMapper } from '../../data/api-mapper';
-import BookmarkPage from '../bookmark/bookmark-page.js';
 import BookmarkPresenter from '../bookmark/bookmark-presenter.js';
 
 export default class StorieDetailPresenter {
@@ -67,6 +66,19 @@ export default class StorieDetailPresenter {
       this.#view.populateReportDetailError(error.message);
     } finally {
       this.#view.hideReportDetailLoading();
+    }
+  }
+
+  async notifyMe() {
+    try {
+      const response = await this.#apiModel.sendReportToMeViaNotification(this.#reportId);
+      if (!response.ok) {
+        console.error('notifyMe: response:', response);
+        return;
+      }
+      console.log('notifyMe:', response.message);
+    } catch (error) {
+      console.error('notifyMe: error:', error);
     }
   }
 

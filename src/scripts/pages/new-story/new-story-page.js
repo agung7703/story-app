@@ -5,10 +5,7 @@ import { generateLoaderAbsoluteTemplate } from '../../templates';
 import Camera from '../../utils/camera';
 import Map from '../../utils/map';
 import Swal from 'sweetalert2';
-import { addStory, getAllStories, deleteStory } from '../../utils/indexeddb';
-
-const VAPID_PUBLIC_KEY =
-  'BCCs2eonMI-6H2ctvFaWg-UYdDv387Vno_bzUzALpB442r2lCnsHmtrx8biyPi_E-1fSGABK_Qs_GlvPoJJqxbk';
+import { addStory } from '../../utils/indexeddb';
 
 export default class NewStoryPage {
   #presenter;
@@ -17,7 +14,6 @@ export default class NewStoryPage {
   #isCameraOpen = false;
   #takenDocumentations = [];
   #map;
-  #storedStories = [];
 
   async render() {
     return `
@@ -271,10 +267,8 @@ export default class NewStoryPage {
       const imageUrl = URL.createObjectURL(picture.blob);
       return accumulator.concat(`
         <li class="new-form__documentations__outputs-item">
-          <button type="button" data-deletepictureid="${
-            picture.id
-          }" class="new-form__documentations__outputs-item__delete-btn">
-            <img src="${imageUrl}" alt="Dokumentasi ke-${currentIndex + 1}">
+          <button type="button" data-deletepictureid="\${picture.id}" class="new-form__documentations__outputs-item__delete-btn">
+            <img src="\${imageUrl}" alt="Dokumentasi ke-\${currentIndex + 1}">
           </button>
         </li>
       `);
@@ -288,7 +282,7 @@ export default class NewStoryPage {
 
         const deleted = this.#removePicture(pictureId);
         if (!deleted) {
-          console.log(`Picture with id ${pictureId} was not found`);
+          console.log(`Picture with id \${pictureId} was not found`);
         }
 
         // Updating taken pictures
@@ -319,16 +313,20 @@ export default class NewStoryPage {
     console.log(message);
     this.clearForm();
 
-    // Show notification immediately using Notification API without description
+    // Show notification using ServiceWorkerRegistration.showNotification()
     if (Notification.permission === 'granted') {
-      new Notification('Story berhasil dibuat', {
-        body: `Anda telah membuat story baru.`,
+      navigator.serviceWorker.ready.then((registration) => {
+        registration.showNotification('Story berhasil dibuat', {
+          body: 'Anda telah membuat story baru.',
+        });
       });
     } else if (Notification.permission !== 'denied') {
       Notification.requestPermission().then((permission) => {
         if (permission === 'granted') {
-          new Notification('Story berhasil dibuat', {
-            body: `Anda telah membuat story baru.`,
+          navigator.serviceWorker.ready.then((registration) => {
+            registration.showNotification('Story berhasil dibuat', {
+              body: 'Anda telah membuat story baru.',
+            });
           });
         }
       });

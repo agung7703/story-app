@@ -3,11 +3,18 @@ import {
   generateAuthenticatedNavigationListTemplate,
   generateMainNavigationListTemplate,
   generateUnauthenticatedNavigationListTemplate,
+  generateSubscribeButtonTemplate,
+  generateUnsubscribeButtonTemplate,
 } from '../templates';
-import { setupSkipToContent, transitionHelper } from '../utils';
+import { isServiceWorkerAvailable, setupSkipToContent, transitionHelper } from '../utils';
 import { getAccessToken, getLogout } from '../utils/auth';
 import { routes } from '../routes/routes';
 import Swal from 'sweetalert2';
+import {
+  isCurrentPushSubscriptionAvailable,
+  subscribe,
+  unsubscribe,
+} from '../utils/notification-helper';
 
 export default class App {
   #content;
@@ -78,11 +85,19 @@ export default class App {
     if (!isLogin) {
       navListMain.innerHTML = '';
       navList.innerHTML = generateUnauthenticatedNavigationListTemplate();
+      console.log(
+        'After setting unauthenticated navList, push-notification-tools element:',
+        document.getElementById('push-notification-tools'),
+      );
       return;
     }
 
     navListMain.innerHTML = generateMainNavigationListTemplate();
     navList.innerHTML = generateAuthenticatedNavigationListTemplate();
+    console.log(
+      'After setting authenticated navList, push-notification-tools element:',
+      document.getElementById('push-notification-tools'),
+    );
 
     const logoutButton = document.getElementById('logout-button');
     logoutButton.addEventListener('click', (event) => {
@@ -105,6 +120,29 @@ export default class App {
         }
       });
     });
+  }
+
+  async #setupPushNotification() {
+    const pushNotificationTools = document.getElementById('push-notification-tools');
+    const isSubscribed = await isCurrentPushSubscriptionAvailable();
+
+    pushNotificationTools.innerHTML = generateSubscribeButtonTemplate();
+    document.getElementById('subscribe-button').addEventListener('click', () => {
+      subscribe().finally(() => {
+        this.#setupPushNotification();
+      });
+    });
+
+    if (isSubscribed) {
+      pushNotificationTools.innerHTML = generateUnsubscribeButtonTemplate();
+      document.getElementById('unsubscribe-button').addEventListener('click', () => {
+        unsubscribe().finally(() => {
+          this.#setupPushNotification();
+        });
+      });
+
+      return;
+    }
   }
 
   async renderPage() {
@@ -155,6 +193,14 @@ export default class App {
     transition.updateCallbackDone.then(() => {
       scrollTo({ top: 0, behavior: 'instant' });
       this.#setupNavigationList();
+
+      const pushNotificationTools = document.getElementById('push-notification-tools');
+      console.log('In renderPage - pushNotificationTools element:', pushNotificationTools);
+
+      if (isServiceWorkerAvailable()) {
+        console.log('Calling #setupPushNotification');
+        this.#setupPushNotification();
+      }
     });
   }
 }

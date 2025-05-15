@@ -199,6 +199,11 @@ export function generateReportDetailTemplate({ description, photoUrl, lat, lon, 
           <h2>Aksi</h2>
           <div class="report-detail__actions__buttons">
             <div id="save-actions-container"></div>
+            <div id="notify-me-actions-container">
+              <button id="report-detail-notify-me" class="btn btn-transparent">
+                Try Notify Me <i class="far fa-bell"></i>
+              </button>
+            </div>
           </div>
         </div>
       </div>

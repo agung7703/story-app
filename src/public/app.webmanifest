@@ -95,7 +95,7 @@
       "name": "Laporan Baru",
       "short_name": "Baru",
       "description": "Membuat laporan kerusakan baru.",
-      "url": "/?source=pwa#/new",
+      "url": "/?source=pwa#/new_story",
       "icons": [
         {
           "src": "images/icons/add-x512.png",

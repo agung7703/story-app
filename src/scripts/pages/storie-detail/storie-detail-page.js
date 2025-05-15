@@ -169,6 +169,12 @@ export default class StorieDetailPage {
     });
   }
 
+  addNotifyMeEventListener() {
+    document.getElementById('report-detail-notify-me').addEventListener('click', () => {
+      this.#presenter.notifyMe();
+    });
+  }
+
   showReportDetailLoading() {
     document.getElementById('report-detail-loading-container').innerHTML =
       generateLoaderAbsoluteTemplate();
